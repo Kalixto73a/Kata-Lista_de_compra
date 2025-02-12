@@ -1,20 +1,29 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
 use App\Models\Lista;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 
 class ListaController extends Controller
 {
     public function index()
     {
         $lists = Lista::all();
-
+        if ($lists->isEmpty()) {
+            return response()->json(['message'=>'No hay productos'], 404);
+        }
         return response()->json($lists, 200);       
     }
     public function store(Request $request)
     {
+        $checkIfProctExist = $this->checkIfProductExist($request);
+
+        if ($checkIfProctExist) {
+            return response()->json(['message' => 'El producto ya existe'], 400);
+        }
+
         $validated = $request->validate([
             'product_name' => 'required|string'
         ]);
@@ -23,8 +32,6 @@ class ListaController extends Controller
             'product_name' => $validated['product_name']    
         ]);
 
-        $this->checkIfProductExist($request);
-
         $product->save();
 
         return response()->json($product, 201);
@@ -32,6 +39,12 @@ class ListaController extends Controller
 
     public function update(Request $request, string $id)
     {
+        $checkIfProctExist = $this->checkIfProductExist($request);
+
+        if ($checkIfProctExist) {
+            return response()->json(['message' => 'El producto ya existe'], 400);
+        }
+        
         $product = Lista::find($id);
 
         if (!$product) {
@@ -66,15 +79,17 @@ class ListaController extends Controller
         return response()->json(['message'=>'Producto eliminado exitosamente'], 200);
     }
 
-    public function destroyAll()
+    public function destroyAll(Request $request)
     {
-        $product = Lista::all();
-        
-        if (!$product) {
-            return response()->json(['message'=>'No hay productos'], 404);
-        }
+        $products = Lista::all();
 
-        $product->delete();
+        if ($products ->isEmpty()) {
+            return response()->json(['message'=>'No hay productos'], 404);
+        } else {
+                   foreach ($products as $product) {
+                $product->delete();
+            }
+        }
 
         return response()->json(['message'=>'Todos los productos a sido eliminados de forma exitosa'], 200);
     }
